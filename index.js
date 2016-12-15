@@ -137,7 +137,6 @@ const sendDataToNR = data => fetch(NEW_RELIC_URL, {
     console.log('error', res.status)
     throw new Error(res);
   }
-  console.log('here', res.status)
   return res.json();
 })
   .then(data => console.log(data))
@@ -160,8 +159,10 @@ const sendDataToAnodot = data => fetch(ANODOT_URL, {
     .then(data => console.log(data))
     .catch(ex => console.error(ex));
 
-getSentryData()
+const doSomething = (cb) => getSentryData()
   .then(data => Promise.all([
     sendDataToAnodot(data),
     sendDataToNR(data)
   ]));
+doSomething()
+// module.exports = doSomething;

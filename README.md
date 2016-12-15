@@ -17,9 +17,8 @@ along with a link to Sentry, a description, and the number of actual events that
 To run locally: clone, `npm install`, and set the auth token in the config file. To generate an auth token for your account, visit [https://sentry.io/api/](https://sentry.io/api/). 
 
 ## TODO
-
-1. Upload data to New Relic and Anodot - both have HTTP API you can POST data to 
-1. Find a good scheduling service to make the task run (AWS has lambda scheduling, but I bet it's expensive, is there a standard Wix solution to this?)
-1. Clean up, separate config from logic, figure out a proper authentication token mechanism
+ 
+1. Find a good scheduling service to make the task run (cronulla is a wix service, and a node server can be set up, but I'd prefer something simpler)
+1. Clean up, separate config from logic, figure out a proper authentication token mechanism for all three services
 1. Support multiple simultaneous filters so more than just CRM can use it
 1. Pull the logic/service part out of it and open source, keep the config private
