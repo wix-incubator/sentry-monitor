@@ -7,13 +7,16 @@ const SENTRY_URL = 'https://sentry.io/api/0/';
 const NEW_RELIC_URL = 'https://insights-collector.newrelic.com/v1/accounts/23428/events';
 const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
 const HOUR = 3600 * 1000;
-const fetchOptions = {
+const INTERVAL = HOUR / 12;
+const PAGINATION_RECURSION_LIMIT = 1000; //just in case
+
+const sentryFetchOptions = {
   headers: {
     Authorization: sentryAuthorization
   }
 };
 
-const getPage = url => fetch(url, fetchOptions)
+const getPage = url => fetch(url, sentryFetchOptions)
   .then(res => res.json()
     .then(data => {
       if (!res.ok) {
@@ -26,14 +29,13 @@ const getPage = url => fetch(url, fetchOptions)
       };
     }))
   .catch(ex => {
-    console.error(ex);
+    console.error('Failed to get page: ', url, ex);
     throw ex;
   });
 
-const PAGINATION_RECURSION_LIMIT = 1000; //just in case
 
 const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated') => {
-  console.log('Fetching page...');
+  console.log(`Fetching page, url: ${url}...`);
   return getPage(url)
     .then(result => {
       let {data, nextUrl} = result;
@@ -51,7 +53,7 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
       }
     })
     .catch(ex => {
-      console.error('Failed to get page: ', url, ex);
+      console.error('Failed to get data: ', url, ex);
       throw ex;
     });
   };
@@ -61,7 +63,7 @@ const searchEventMessage = (event, searchTerms) => searchTerms.some(term => even
 const getSentryData = (startTime, endTime) =>
   getPagedData(`${SENTRY_URL}projects/${org}/${project}/events/`, startTime, [], 'dateCreated')
     .then(data => {
-      console.log(`Processing total of ${data.length} events in range`);
+      console.info(`Processing total of ${data.length} events in range`);
       const events = _.filter(data, e => searchEventMessage(e, searchTerms));
       const counts = _.countBy(events, 'groupID');
       const mapped = Object.keys(counts).map(groupID => ({
@@ -78,11 +80,15 @@ const getSentryData = (startTime, endTime) =>
         totalEvents: events.length,
         errors: mapped
       };
-      console.info(result);
+      console.info(`Found ${events.length} events in ${mapped.length} issues`);
       return result;
+    })
+    .catch(ex => {
+      console.error('Failed to get Sentry events properly');
+      throw ex;
     });
 
-const anodotData = data => {
+const formatDataForAnodot = data => {
   return [
     {
       properties: {
@@ -98,7 +104,7 @@ const anodotData = data => {
   ];
 };
 
-const newRelicData = data => {
+const formatDataForNewRelic = data => {
   const formatted = [
     {
       eventType: 'SentryMonitoring',
@@ -124,49 +130,42 @@ const newRelicData = data => {
   return formatted;
 };
 
-const sendDataToNR = data => fetch(NEW_RELIC_URL, {
+const handleDataUploadResponse = (res, destination) => {
+  if (!res.ok) {
+    console.error(`${res.status} Error sending data to ${destination}`);
+    throw new Error(res);
+  } else {
+    console.log('Successfully sent data to Anodot');
+  }
+};
+
+const sendDataToNewRelic = data => fetch(NEW_RELIC_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
     'X-Insert-Key': NEW_RELIC_AUTH
   },
-  body: JSON.stringify(newRelicData(data))
-}).then(res => {
-  if (!res.ok) {
-    console.log('error', res.status);
-    throw new Error(res);
-  }
-  return res.json();
-})
-  .then(data => console.log(data))
-  .catch(ex => console.error(ex));
+  body: JSON.stringify(formatDataForNewRelic(data))
+}).then(res => handleDataUploadResponse(res, 'New Relic'));
 
 const sendDataToAnodot = data => fetch(ANODOT_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(anodotData(data))
-  }).then(res => {
-    if (!res.ok) {
-      console.log('error', res.status);
-      throw new Error(res);
-    }
-    console.log('here', res.status);
-    return res.json();
-  })
-    .then(data => console.log(data))
-    .catch(ex => console.error(ex));
+    body: JSON.stringify(formatDataForAnodot(data))
+}).then(res => handleDataUploadResponse(res, 'Anodot'));
 
 const run = () => {
   const endTime = new Date().getTime();
-  const startTime = endTime - (HOUR / 12);
+  const startTime = endTime - INTERVAL;
   getSentryData(startTime, endTime)
     .then(data => Promise.all([
       sendDataToAnodot(data),
-      sendDataToNR(data)
-    ]));
+      sendDataToNewRelic(data)
+    ]))
+    .catch(ex => console.error(ex));
 };
 
 run();
-setInterval(run, HOUR / 12);
+setInterval(run, INTERVAL);
