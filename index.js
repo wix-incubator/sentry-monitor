@@ -135,7 +135,7 @@ const handleDataUploadResponse = (res, destination) => {
     console.error(`${res.status} Error sending data to ${destination}`);
     throw new Error(res);
   } else {
-    console.log('Successfully sent data to Anodot');
+    console.log(`Successfully sent data to ${destimation}`);
   }
 };
 
@@ -159,6 +159,8 @@ const sendDataToAnodot = data => fetch(ANODOT_URL, {
 const run = () => {
   const endTime = new Date().getTime();
   const startTime = endTime - INTERVAL;
+  console.info(`--------------------------------------------------------`);
+  console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
   getSentryData(startTime, endTime)
     .then(data => Promise.all([
       sendDataToAnodot(data),
