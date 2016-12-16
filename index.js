@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 const _ = require('lodash');
 const parse = require('parse-link-header');
+const app = require('express')();
 const {sentryAuthorization, ANODOT_AUTH, NEW_RELIC_AUTH, org, project, searchTerms} = require('./config');
 
 const SENTRY_URL = 'https://sentry.io/api/0/';
@@ -156,18 +157,47 @@ const sendDataToAnodot = data => fetch(ANODOT_URL, {
     body: JSON.stringify(formatDataForAnodot(data))
 }).then(res => handleDataUploadResponse(res, 'Anodot'));
 
-const run = () => {
+const run = ({debug = false} = {}) => {
   const endTime = new Date().getTime();
   const startTime = endTime - INTERVAL;
   console.info(`--------------------------------------------------------`);
   console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
   getSentryData(startTime, endTime)
-    .then(data => Promise.all([
-      sendDataToAnodot(data),
-      sendDataToNewRelic(data)
-    ]))
+    .then(data => {
+      if (debug) {
+        console.log('Debug Mode: not sending any data anywhere...');
+        console.log('Data: ');
+        console.log(data);
+      } else {
+        return Promise.all([
+          sendDataToAnodot(data),
+          sendDataToNewRelic(data)
+        ]);
+      }
+    })
     .catch(ex => console.error(ex));
 };
 
-run();
-setInterval(run, INTERVAL);
+//to allow us to restart the service without triggering duplicate data,
+//the job should always run on a round number and we should wait until
+//the next interval before starting our setInterval. There is a very small chance
+//we'll miss one this way, but it's better than the alternative
+//this whole thing only works if the interval is five minutes, which should really be configurable
+//really this should be changed to listen on a web endpoint, and then a cron job that calls the endpoint.
+const minute = new Date().getTime() / (1000 * 60) % 10; //the last digit on the clock, ignoring seconds
+const startInMinutes = 5 - Math.floor(minute % 5);
+
+setTimeout(() => {
+  run();
+  setInterval(run, INTERVAL);
+}, startInMinutes * 60 * 1000);
+
+app.route('/')
+  .post((req, res) => {
+    run({debug: req.query.debug});
+    res.sendStatus(200);
+  });
+
+app.listen(3000, () => {
+  console.log('Listening on localhost:3000');
+});
