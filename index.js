@@ -135,7 +135,7 @@ const handleDataUploadResponse = (res, destination) => {
     console.error(`${res.status} Error sending data to ${destination}`);
     throw new Error(res);
   } else {
-    console.log(`Successfully sent data to ${destimation}`);
+    console.log(`Successfully sent data to ${destination}`);
   }
 };
 
