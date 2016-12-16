@@ -134,7 +134,7 @@ const sendDataToNR = data => fetch(NEW_RELIC_URL, {
   body: JSON.stringify(newRelicData(data))
 }).then(res => {
   if (!res.ok) {
-    console.log('error', res.status)
+    console.log('error', res.status);
     throw new Error(res);
   }
   return res.json();
@@ -150,19 +150,20 @@ const sendDataToAnodot = data => fetch(ANODOT_URL, {
     body: JSON.stringify(anodotData(data))
   }).then(res => {
     if (!res.ok) {
-      console.log('error', res.status)
+      console.log('error', res.status);
       throw new Error(res);
     }
-    console.log('here', res.status)
+    console.log('here', res.status);
     return res.json();
   })
     .then(data => console.log(data))
     .catch(ex => console.error(ex));
 
-const doSomething = (cb) => getSentryData()
+const run = () => getSentryData()
   .then(data => Promise.all([
     sendDataToAnodot(data),
     sendDataToNR(data)
   ]));
-doSomething()
-// module.exports = doSomething;
+
+run();
+setInterval(run, HOUR / 12);
