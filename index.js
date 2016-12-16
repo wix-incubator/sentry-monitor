@@ -56,32 +56,31 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
     });
   };
 
-const endTime = new Date().getTime();
-const startTime = endTime - (HOUR / 12);
 const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
 
-const getSentryData = () => getPagedData(`${SENTRY_URL}projects/${org}/${project}/events/`, startTime, [], 'dateCreated')
-  .then(data => {
-    console.log(`Processing total of ${data.length} events in range`);
-    const events = _.filter(data, e => searchEventMessage(e, searchTerms));
-    const counts = _.countBy(events, 'groupID');
-    const mapped = Object.keys(counts).map(groupID => ({
-      groupID,
-      count: counts[groupID],
-      url: `https://sentry.io/${org}/${project}/issues/${groupID}/`,
-      message: _.find(events, e => e.groupID === groupID).message,
-    }));
-    const result = {
-      range: {
-        start: startTime,
-        end: endTime
-      },
-      totalEvents: events.length,
-      errors: mapped
-    };
-    console.info(result);
-    return result;
-  });
+const getSentryData = (startTime, endTime) =>
+  getPagedData(`${SENTRY_URL}projects/${org}/${project}/events/`, startTime, [], 'dateCreated')
+    .then(data => {
+      console.log(`Processing total of ${data.length} events in range`);
+      const events = _.filter(data, e => searchEventMessage(e, searchTerms));
+      const counts = _.countBy(events, 'groupID');
+      const mapped = Object.keys(counts).map(groupID => ({
+        groupID,
+        count: counts[groupID],
+        url: `https://sentry.io/${org}/${project}/issues/${groupID}/`,
+        message: _.find(events, e => e.groupID === groupID).message,
+      }));
+      const result = {
+        range: {
+          start: startTime,
+          end: endTime
+        },
+        totalEvents: events.length,
+        errors: mapped
+      };
+      console.info(result);
+      return result;
+    });
 
 const anodotData = data => {
   return [
@@ -159,11 +158,15 @@ const sendDataToAnodot = data => fetch(ANODOT_URL, {
     .then(data => console.log(data))
     .catch(ex => console.error(ex));
 
-const run = () => getSentryData()
-  .then(data => Promise.all([
-    sendDataToAnodot(data),
-    sendDataToNR(data)
-  ]));
+const run = () => {
+  const endTime = new Date().getTime();
+  const startTime = endTime - (HOUR / 12);
+  getSentryData(startTime, endTime)
+    .then(data => Promise.all([
+      sendDataToAnodot(data),
+      sendDataToNR(data)
+    ]));
+};
 
 run();
 setInterval(run, HOUR / 12);
