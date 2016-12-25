@@ -10,3 +10,27 @@ app.route('/')
 app.listen(3000, () => {
   console.log('Listening on localhost:3000');
 });
+
+
+
+/*
+
+global.config = {
+  SENTRY_AUTH,
+  NEW_RELIC_AUTH,
+  NEW_RELIC_ACCOUNT_ID,
+  ANODOT_AUTH,
+  org: '',
+  project: '',
+  filters: [
+    {
+      name: '',
+      searchTerms: ['', '']
+    }
+  ]
+};
+
+
+
+
+ */

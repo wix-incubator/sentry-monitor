@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 const _ = require('lodash');
 const parse = require('parse-link-header');
-const {SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters} = require('./config');
+const {SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters} = global.config;
 
 const SENTRY_URL = 'https://sentry.io/api/0/';
 const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
