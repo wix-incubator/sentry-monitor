@@ -1,23 +1,21 @@
 const fetch = require('node-fetch');
 const _ = require('lodash');
 const parse = require('parse-link-header');
-const {sentryAuthorization, ANODOT_AUTH, NEW_RELIC_AUTH, org, project, searchTerms} = require('./config');
+const {SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters} = require('./config');
 
 const SENTRY_URL = 'https://sentry.io/api/0/';
-const NEW_RELIC_URL = 'https://insights-collector.newrelic.com/v1/accounts/23428/events';
+const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
 const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
 const HOUR = 3600 * 1000;
 const INTERVAL = HOUR / 12;
 const PAGINATION_RECURSION_LIMIT = 1000; //just in case
 
-const sentryFetchOptions = {
-  headers: {
-    Authorization: sentryAuthorization
-  }
-};
 
-const getPage = url => fetch(url, sentryFetchOptions)
-  .then(res => res.json()
+const getPage = url => fetch(url, {
+  headers: {
+    Authorization: SENTRY_AUTH
+  }
+}).then(res => res.json()
     .then(data => {
       if (!res.ok) {
         throw new Error(`Status ${res.status} on ${url}: ${data.detail}`);
@@ -64,24 +62,30 @@ const getSentryData = (startTime, endTime) =>
   getPagedData(`${SENTRY_URL}projects/${org}/${project}/events/`, startTime, [], 'dateCreated')
     .then(data => {
       console.info(`Processing total of ${data.length} events in range`);
-      const events = _.filter(data, e => searchEventMessage(e, searchTerms));
-      const counts = _.countBy(events, 'groupID');
-      const mapped = Object.keys(counts).map(groupID => ({
-        groupID,
-        count: counts[groupID],
-        url: `https://sentry.io/${org}/${project}/issues/${groupID}/`,
-        message: _.find(events, e => e.groupID === groupID).message,
-      }));
-      const result = {
-        range: {
-          start: startTime,
-          end: endTime
-        },
-        totalEvents: events.length,
-        errors: mapped
-      };
-      console.info(`Found ${events.length} events in ${mapped.length} issues`);
-      return result;
+      const results = [];
+      filters.forEach(filter => {
+        const events = _.filter(data, e => searchEventMessage(e, filter.searchTerms));
+        const counts = _.countBy(events, 'groupID');
+        const mapped = Object.keys(counts).map(groupID => ({
+          groupID,
+          count: counts[groupID],
+          url: `https://sentry.io/${org}/${project}/issues/${groupID}/`,
+          message: _.find(events, e => e.groupID === groupID).message,
+        }));
+        console.info(`Found ${events.length} events in ${mapped.length} issues`);
+
+        results.push({
+          range: {
+            start: startTime,
+            end: endTime
+          },
+          filterName: filter.name,
+          totalEvents: events.length,
+          errors: mapped
+        });
+      });
+
+      return results;
     })
     .catch(ex => {
       console.error('Failed to get Sentry events properly');
@@ -89,44 +93,47 @@ const getSentryData = (startTime, endTime) =>
     });
 
 const formatDataForAnodot = data => {
-  return [
-    {
-      properties: {
-        what: "sentry_events",
-        project: 'WOA',
-        filter: 'CRM',
-        type: 'event_count',
-        target_type: "counter"
-      },
-      timestamp: data.range.end / 1000,
-      value: data.totalEvents
-    }
-  ];
+  return data.map(filterResults => ({
+    properties: {
+      what: "sentry_events",
+      project: 'WOA',
+      filter: filterResults.filterName,
+      type: 'event_count',
+      target_type: "counter"
+    },
+    timestamp: filterResults.range.end / 1000,
+    value: filterResults.totalEvents
+  }));
 };
 
 const formatDataForNewRelic = data => {
-  const formatted = [
-    {
-      eventType: 'SentryMonitoring',
-      project: 'WOA',
-      filter: 'CRM',
-      type: 'event_count',
-      value: data.totalEvents
-    }
-  ];
-
-  data.errors.forEach(error => {
+  const formatted = [];
+  data.forEach(filterResults => {
+    const filter = filterResults.filterName;
     formatted.push({
       eventType: 'SentryMonitoring',
       project: 'WOA',
-      filter: 'CRM',
-      type: 'sentry_issue',
-      sentryIssueId: error.groupID,
-      sentryUrl: error.url,
-      message: error.message,
-      count: error.count
+      filter,
+      type: 'event_count',
+      value: filterResults.totalEvents
     });
+
+    filterResults.errors.forEach(error => {
+      formatted.push({
+        eventType: 'SentryMonitoring',
+        project: 'WOA',
+        filter,
+        type: 'sentry_issue',
+        sentryIssueId: error.groupID,
+        sentryUrl: error.url,
+        message: error.message,
+        count: error.count
+      });
+    });
+
   });
+
+
   return formatted;
 };
 
@@ -165,8 +172,10 @@ const run = ({debug = false} = {}) => {
     .then(data => {
       if (debug) {
         console.log('Debug Mode: not sending any data anywhere...');
-        console.log('Data: ');
-        console.log(data);
+        console.log('NR Data: ');
+        console.log(formatDataForNewRelic(data));
+        console.log('Anodot Data: ');
+        console.log(formatDataForAnodot(data));
       } else {
         return Promise.all([
           sendDataToAnodot(data),
