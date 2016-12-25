@@ -1,21 +1,22 @@
 const app = require('express')();
-const runSentryMonitor = require('./sentry-monitor');
+const run = require('./sentry-monitor');
 
-app.route('/')
-  .post((req, res) => {
-    runSentryMonitor({debug: req.query.debug});
-    res.sendStatus(200);
+module.exports = function(config) {
+  app.route('/')
+    .post((req, res) => {
+      run({debug: req.query.debug, config});
+      res.sendStatus(200);
+    });
+
+  app.listen(3000, () => {
+    console.log('Listening on localhost:3000');
   });
 
-app.listen(3000, () => {
-  console.log('Listening on localhost:3000');
-});
-
-
+}
 
 /*
 
-global.config = {
+const config = {
   SENTRY_AUTH,
   NEW_RELIC_AUTH,
   NEW_RELIC_ACCOUNT_ID,

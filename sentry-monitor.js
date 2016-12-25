@@ -1,19 +1,34 @@
 const fetch = require('node-fetch');
 const _ = require('lodash');
 const parse = require('parse-link-header');
-const {SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters} = global.config;
 
-const SENTRY_URL = 'https://sentry.io/api/0/';
-const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
-const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
-const HOUR = 3600 * 1000;
-const INTERVAL = HOUR / 12;
-const PAGINATION_RECURSION_LIMIT = 1000; //just in case
+const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters}) => {
+  const SENTRY_URL = 'https://sentry.io/api/0/';
+  const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
+  const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
+  const HOUR = 3600 * 1000;
+  const INTERVAL = HOUR / 12;
+  const PAGINATION_RECURSION_LIMIT = 1000; //just in case
+
+  return {
+    SENTRY_URL,
+    SENTRY_AUTH,
+    ANODOT_URL,
+    NEW_RELIC_URL,
+    HOUR,
+    INTERVAL,
+    PAGINATION_RECURSION_LIMIT,
+    org,
+    project,
+    filters
+  }
+}
+
 
 
 const getPage = url => fetch(url, {
   headers: {
-    Authorization: SENTRY_AUTH
+    Authorization: global.config.SENTRY_AUTH
   }
 }).then(res => res.json()
     .then(data => {
@@ -44,7 +59,7 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
         stop = true;
       }
       acc = [...acc, ...data];
-      if (nextUrl && acc.length < PAGINATION_RECURSION_LIMIT && !stop) {
+      if (nextUrl && acc.length < global.config.PAGINATION_RECURSION_LIMIT && !stop) {
         return getPagedData(nextUrl, startDatetime, acc, datetimeField);
       } else {
         return acc;
@@ -59,17 +74,17 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
 const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
 
 const getSentryData = (startTime, endTime) =>
-  getPagedData(`${SENTRY_URL}projects/${org}/${project}/events/`, startTime, [], 'dateCreated')
+  getPagedData(`${global.config.SENTRY_URL}projects/${global.config.org}/${global.config.project}/events/`, startTime, [], 'dateCreated')
     .then(data => {
       console.info(`Processing total of ${data.length} events in range`);
       const results = [];
-      filters.forEach(filter => {
+      global.config.filters.forEach(filter => {
         const events = _.filter(data, e => searchEventMessage(e, filter.searchTerms));
         const counts = _.countBy(events, 'groupID');
         const mapped = Object.keys(counts).map(groupID => ({
           groupID,
           count: counts[groupID],
-          url: `https://sentry.io/${org}/${project}/issues/${groupID}/`,
+          url: `https://sentry.io/${global.config.org}/${global.config.project}/issues/${groupID}/`,
           message: _.find(events, e => e.groupID === groupID).message,
         }));
         console.info(`Found ${events.length} events in ${mapped.length} issues`);
@@ -146,16 +161,16 @@ const handleDataUploadResponse = (res, destination) => {
   }
 };
 
-const sendDataToNewRelic = data => fetch(NEW_RELIC_URL, {
+const sendDataToNewRelic = data => fetch(global.config.NEW_RELIC_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'X-Insert-Key': NEW_RELIC_AUTH
+    'X-Insert-Key': global.config.NEW_RELIC_AUTH
   },
   body: JSON.stringify(formatDataForNewRelic(data))
 }).then(res => handleDataUploadResponse(res, 'New Relic'));
 
-const sendDataToAnodot = data => fetch(ANODOT_URL, {
+const sendDataToAnodot = data => fetch(global.config.ANODOT_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -163,9 +178,13 @@ const sendDataToAnodot = data => fetch(ANODOT_URL, {
   body: JSON.stringify(formatDataForAnodot(data))
 }).then(res => handleDataUploadResponse(res, 'Anodot'));
 
-const run = ({debug = false} = {}) => {
+const run = ({debug = false, config} = {}) => {
+  if (!config) {
+    throw new Error('No config!')
+  }
+  global.config = getConstants(config);
   const endTime = new Date().getTime();
-  const startTime = endTime - INTERVAL;
+  const startTime = endTime - global.config.INTERVAL;
   console.info(`--------------------------------------------------------`);
   console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
   getSentryData(startTime, endTime)
