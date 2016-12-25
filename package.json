@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": ":",
+    "build": ":",
+    "release": "wnpm-release -- --no-shrinkwrap",
+    "postrelease": "echo \"##teamcity[buildStatus text='Version: `jq -r '.version' package.json`; {build.status.text}']\"",
+    "postpublish": "version=$(jq -r '.version' package.json); npm dist-tag add react-native-extended-cli@${version} ga"
   },
   "author": "Aaron Greenwald",
   "license": "MIT",
@@ -14,5 +18,11 @@
     "lodash": "^4.17.2",
     "node-fetch": "^1.6.3",
     "parse-link-header": "^0.4.1"
+  },
+  "optionalDependencies": {
+    "wnpm-ci": "^6.2.44"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
   }
 }
