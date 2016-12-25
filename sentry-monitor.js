@@ -1,6 +1,9 @@
 const fetch = require('node-fetch');
 const _ = require('lodash');
 const parse = require('parse-link-header');
+const opts = {
+
+};
 
 const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters}) => {
   const SENTRY_URL = 'https://sentry.io/api/0/';
@@ -23,13 +26,13 @@ const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOU
     project,
     filters
   }
-}
+};
 
 
 
 const getPage = url => fetch(url, {
   headers: {
-    Authorization: global.config.SENTRY_AUTH
+    Authorization: opts.constants.SENTRY_AUTH
   }
 }).then(res => res.json()
     .then(data => {
@@ -60,7 +63,7 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
         stop = true;
       }
       acc = [...acc, ...data];
-      if (nextUrl && acc.length < global.config.PAGINATION_RECURSION_LIMIT && !stop) {
+      if (nextUrl && acc.length < opts.constants.PAGINATION_RECURSION_LIMIT && !stop) {
         return getPagedData(nextUrl, startDatetime, acc, datetimeField);
       } else {
         return acc;
@@ -75,17 +78,17 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
 const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
 
 const getSentryData = (startTime, endTime) =>
-  getPagedData(`${global.config.SENTRY_URL}projects/${global.config.org}/${global.config.project}/events/`, startTime, [], 'dateCreated')
+  getPagedData(`${opts.constants.SENTRY_URL}projects/${opts.constants.org}/${opts.constants.project}/events/`, startTime, [], 'dateCreated')
     .then(data => {
       console.info(`Processing total of ${data.length} events in range`);
       const results = [];
-      global.config.filters.forEach(filter => {
+      opts.constants.filters.forEach(filter => {
         const events = _.filter(data, e => searchEventMessage(e, filter.searchTerms));
         const counts = _.countBy(events, 'groupID');
         const mapped = Object.keys(counts).map(groupID => ({
           groupID,
           count: counts[groupID],
-          url: `https://sentry.io/${global.config.org}/${global.config.project}/issues/${groupID}/`,
+          url: `https://sentry.io/${opts.constants.org}/${opts.constants.project}/issues/${groupID}/`,
           message: _.find(events, e => e.groupID === groupID).message,
         }));
         console.info(`Found ${events.length} events in ${mapped.length} issues`);
@@ -162,16 +165,16 @@ const handleDataUploadResponse = (res, destination) => {
   }
 };
 
-const sendDataToNewRelic = data => fetch(global.config.NEW_RELIC_URL, {
+const sendDataToNewRelic = data => fetch(opts.constants.NEW_RELIC_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'X-Insert-Key': global.config.NEW_RELIC_AUTH
+    'X-Insert-Key': opts.constants.NEW_RELIC_AUTH
   },
   body: JSON.stringify(formatDataForNewRelic(data))
 }).then(res => handleDataUploadResponse(res, 'New Relic'));
 
-const sendDataToAnodot = data => fetch(global.config.ANODOT_URL, {
+const sendDataToAnodot = data => fetch(opts.constants.ANODOT_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -183,9 +186,9 @@ const run = ({debug = false, config} = {}) => {
   if (!config) {
     throw new Error('No config!')
   }
-  global.config = getConstants(config);
+  opts.constants = getConstants(config);
   const endTime = new Date().getTime();
-  const startTime = endTime - global.config.INTERVAL;
+  const startTime = endTime - opts.constants.INTERVAL;
   console.info(`--------------------------------------------------------`);
   console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
   getSentryData(startTime, endTime)
