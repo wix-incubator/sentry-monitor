@@ -1,9 +1,7 @@
-const fetch = require('node-fetch');
 const _ = require('lodash');
+const fetch = require('node-fetch');
 const parse = require('parse-link-header');
-const opts = {
-
-};
+const opts = { };
 
 const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters}) => {
   const SENTRY_URL = 'https://sentry.io/api/0/';

@@ -17,11 +17,12 @@ module.exports = function(config) {
       res.sendStatus(200);
     });
 
-  app.listen(3000, () => {
-    console.log('Listening on localhost:3000');
-  });
+  // app.listen(3000, () => {
+  //   console.log('Listening on localhost:3000');
+  // });
 
-}
+  return app;
+};
 
 /*
 
