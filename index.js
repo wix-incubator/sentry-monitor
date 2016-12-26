@@ -14,10 +14,10 @@ module.exports = function(config) {
   app.route('/')
     .post((req, res) => {
       run({debug: req.query.debug, config})
-        .then(res.send)
+        .then(data => res.send(req.query.debug ? data : {}))
         .catch(ex => {
           console.error(ex);
-          res.sendStatus(500);
+          res.status(500).send(ex);
         });
     });
 
