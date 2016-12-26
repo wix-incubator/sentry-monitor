@@ -17,7 +17,8 @@ module.exports = function(config) {
         .then(data => res.send(req.query.debug ? data : {}))
         .catch(ex => {
           console.error(ex);
-          res.status(500).send(ex);
+          res.status(500);
+          res.send(ex);
         });
     });
 
