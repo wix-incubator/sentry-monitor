@@ -181,30 +181,36 @@ const sendDataToAnodot = data => fetch(opts.constants.ANODOT_URL, {
 }).then(res => handleDataUploadResponse(res, 'Anodot'));
 
 const run = ({debug = false, config} = {}) => {
-  if (!config) {
-    throw new Error('No config!')
-  }
-  opts.constants = getConstants(config);
-  const endTime = new Date().getTime();
-  const startTime = endTime - opts.constants.INTERVAL;
-  console.info(`--------------------------------------------------------`);
-  console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
-  getSentryData(startTime, endTime)
-    .then(data => {
-      if (debug) {
-        console.log('Debug Mode: not sending any data anywhere...');
-        console.log('NR Data: ');
-        console.log(formatDataForNewRelic(data));
-        console.log('Anodot Data: ');
-        console.log(formatDataForAnodot(data));
-      } else {
-        return Promise.all([
-          sendDataToAnodot(data),
-          sendDataToNewRelic(data)
-        ]);
-      }
-    })
-    .catch(ex => console.error(ex));
+  return Promise.resolve().then(() => {
+    if (!config) {
+      throw new Error('No config!')
+    }
+    opts.constants = getConstants(config);
+    const endTime = new Date().getTime();
+    const startTime = endTime - opts.constants.INTERVAL;
+    console.info(`--------------------------------------------------------`);
+    console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
+    return getSentryData(startTime, endTime)
+      .then(data => {
+        if (debug) {
+          console.log('Debug Mode: not sending any data anywhere...');
+          console.log('NR Data: ');
+          console.log(formatDataForNewRelic(data));
+          console.log('Anodot Data: ');
+          console.log(formatDataForAnodot(data));
+          return {
+            newRelicData: formatDataForNewRelic(data),
+            anodotData: formatDataForAnodot(data)
+          }
+        } else {
+          return Promise.all([
+            sendDataToAnodot(data),
+            sendDataToNewRelic(data)
+          ]);
+        }
+      });
+  });
+
 };
 
 module.exports = run;

@@ -13,13 +13,13 @@ module.exports = function(config) {
 
   app.route('/')
     .post((req, res) => {
-      run({debug: req.query.debug, config});
-      res.sendStatus(200);
+      run({debug: req.query.debug, config})
+        .then(res.send)
+        .catch(ex => {
+          console.error(ex);
+          res.sendStatus(500);
+        });
     });
-
-  // app.listen(3000, () => {
-  //   console.log('Listening on localhost:3000');
-  // });
 
   return app;
 };
