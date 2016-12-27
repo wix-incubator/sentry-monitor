@@ -24,25 +24,3 @@ module.exports = function(config) {
 
   return app;
 };
-
-/*
-
-const config = {
-  SENTRY_AUTH,
-  NEW_RELIC_AUTH,
-  NEW_RELIC_ACCOUNT_ID,
-  ANODOT_AUTH,
-  org: '',
-  project: '',
-  filters: [
-    {
-      name: '',
-      searchTerms: ['', '']
-    }
-  ]
-};
-
-
-
-
- */

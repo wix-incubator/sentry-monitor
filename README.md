@@ -1,4 +1,4 @@
-# sentry-monitor - WIP
+# sentry-monitor
 
 ## Big Idea
 
@@ -18,23 +18,47 @@ Main KPIs:
 1. Trending Errors: List of Sentry issues (groups of events that Sentry considers to be the same problem) that occurred in the last five minutes
 along with a link to Sentry, a description, and the number of actual events that occurred in the last five minutes.  
 
-## Setup
+## Usage
+
+You'll need a webserver to run the job. Any old node server will do for a minimal implementation. 
+Once you have a project, `npm install sentry-monitor` to get started. In your `index.js`, add:
+
+```js
+
+const monitor = require('sentry-monitor');
+
+
+const config = {
+  SENTRY_AUTH: 'auth_token_for_sentry_api',
+  NEW_RELIC_AUTH: 'new_relic_insert_key',
+  NEW_RELIC_ACCOUNT_ID: 'this_is_your_nr_account_id',
+  ANODOT_AUTH: 'auth_token_for_anodot_api',
+  org: 'your_sentry_org_name',
+  project: 'your_sentry_project_name',
+  filters: [
+    {
+      name: 'MyFilter',
+      searchTerms: ['items I want to see', 'MORE_ITEMS']
+    }
+  ]
+};
+
+
+const app = monitor(config);
+app.listen(3000, () => console.log('Listening on port 3000'));
+
+
+```
+
+Now set up a cron job that posts to this server every five minutes and you're done! 
 
 To run locally: clone, `npm install`, and set the auth tokens and such in a private config file. 
 To generate an auth token for your Sentry account, visit [https://sentry.io/api/](https://sentry.io/api/). 
 
 **Warning:** If you test it locally, you could be sending data to NR and Anodot when you don't mean to, which will mess up 
-our charts. Add a query parameter `debug=true` to the your HTTP requests so that data isn't sent and instead is logged to the console.
+your charts. Add a query parameter `debug=true` to the your HTTP requests so that data isn't sent and instead is logged to the console.
 
-## Current Status
-
-It's running on a temporary server with a cron job that hits the server every five minutes. 
-Speak to [Aaron Greenwald](https://github.com/aarongreenwald) for more info. 
-
-## TODO
  
-1. Migrate to a stable, reliable internal Wix server and lifecycle integration. 
-Then use [cronulla](https://github.com/wix-private/cronulla) to trigger the task every five minutes.
-1. Clean up, separate config from logic, figure out a proper authentication token mechanism for all three services
-1. Support multiple simultaneous filters so more than just CRM can use it
-1. Pull the logic/service part out of it and open source, keep the config private
+## TODO
+
+See the Github issues.
