@@ -35,8 +35,6 @@ const run = ({debug = false, config} = {}) => {
     console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
     const {projects} = opts.constants;
 
-    throw new Error('ddd')
-
     return Promise.all(
       projects
         .map(({project, filters}) =>
