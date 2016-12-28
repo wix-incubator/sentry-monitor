@@ -62,10 +62,10 @@ const getSentryDataByProject = ({startTime, endTime, project, filters, opts}) =>
         const mapped = Object.keys(counts).map(groupID => ({
           groupID,
           count: counts[groupID],
-          url: `https://sentry.io/${opts.constants.org}/${opts.constants.project}/issues/${groupID}/`,
+          url: `https://sentry.io/${opts.constants.org}/${project}/issues/${groupID}/`,
           message: _.find(events, e => e.groupID === groupID).message,
         }));
-        console.info(`Found ${events.length} events in ${mapped.length} issues`);
+        console.info(`Found ${events.length} events in ${mapped.length} issues for project ${project}`);
 
         results.push({
           range: {
