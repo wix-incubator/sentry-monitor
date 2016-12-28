@@ -3,6 +3,14 @@ const run = require('./src/sentry-monitor');
 
 module.exports = function (config) {
 
+  if (!config.projects) {
+    config.projects = [{
+      project: config.project,
+      filters: config.filters
+    }];
+    //TODO should I deprecate the old way?
+  }
+
   app.use((req, res, next) => {
     if (config.WSM_AUTH_KEY && req.headers['x-wsm_auth_key'] !== config.WSM_AUTH_KEY) {
       console.log(`Request denied from ${req.ip}`, req.headers);

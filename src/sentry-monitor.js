@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const parse = require('parse-link-header');
 const opts = { };
 
-const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, project, filters}) => {
+const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, projects}) => {
   const SENTRY_URL = 'https://sentry.io/api/0/';
   const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
   const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
@@ -21,8 +21,7 @@ const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOU
     INTERVAL,
     PAGINATION_RECURSION_LIMIT,
     org,
-    project,
-    filters
+    projects,
   };
 };
 
@@ -75,12 +74,12 @@ const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated
 
 const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
 
-const getSentryData = (startTime, endTime) =>
-  getPagedData(`${opts.constants.SENTRY_URL}projects/${opts.constants.org}/${opts.constants.project}/events/`, startTime, [], 'dateCreated')
+const getSentryData = (startTime, endTime, project, filters) =>
+  getPagedData(`${opts.constants.SENTRY_URL}projects/${opts.constants.org}/${project}/events/`, startTime, [], 'dateCreated')
     .then(data => {
       console.info(`Processing total of ${data.length} events in range`);
       const results = [];
-      opts.constants.filters.forEach(filter => {
+      filters.forEach(filter => {
         const events = _.filter(data, e => searchEventMessage(e, filter.searchTerms));
         const counts = _.countBy(events, 'groupID');
         const mapped = Object.keys(counts).map(groupID => ({
@@ -109,11 +108,11 @@ const getSentryData = (startTime, endTime) =>
       throw ex;
     });
 
-const formatDataForAnodot = data => {
+const formatDataForAnodot = (data, project) => {
   return data.map(filterResults => ({
     properties: {
       what: 'sentry_events',
-      project: opts.constants.project,
+      project,
       filter: filterResults.filterName,
       type: 'event_count',
       target_type: 'counter' //eslint-disable-line camelcase
@@ -123,13 +122,13 @@ const formatDataForAnodot = data => {
   }));
 };
 
-const formatDataForNewRelic = data => {
+const formatDataForNewRelic = (data, project) => {
   const formatted = [];
   data.forEach(filterResults => {
     const filter = filterResults.filterName;
     formatted.push({
       eventType: 'SentryMonitoring',
-      project: opts.constants.project,
+      project,
       filter,
       type: 'event_count',
       value: filterResults.totalEvents
@@ -138,7 +137,7 @@ const formatDataForNewRelic = data => {
     filterResults.errors.forEach(error => {
       formatted.push({
         eventType: 'SentryMonitoring',
-        project: opts.constants.project,
+        project,
         filter,
         type: 'sentry_issue',
         sentryIssueId: error.groupID,
@@ -163,21 +162,21 @@ const handleDataUploadResponse = (res, destination) => {
   }
 };
 
-const sendDataToNewRelic = data => fetch(opts.constants.NEW_RELIC_URL, {
+const sendDataToNewRelic = (data, project) => fetch(opts.constants.NEW_RELIC_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
     'X-Insert-Key': opts.constants.NEW_RELIC_AUTH
   },
-  body: JSON.stringify(formatDataForNewRelic(data))
+  body: JSON.stringify(formatDataForNewRelic(data, project))
 }).then(res => handleDataUploadResponse(res, 'New Relic'));
 
-const sendDataToAnodot = data => fetch(opts.constants.ANODOT_URL, {
+const sendDataToAnodot = (data, project) => fetch(opts.constants.ANODOT_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
   },
-  body: JSON.stringify(formatDataForAnodot(data))
+  body: JSON.stringify(formatDataForAnodot(data, project))
 }).then(res => handleDataUploadResponse(res, 'Anodot'));
 
 const run = ({debug = false, config} = {}) => {
@@ -190,25 +189,28 @@ const run = ({debug = false, config} = {}) => {
     const startTime = endTime - opts.constants.INTERVAL;
     console.info(`--------------------------------------------------------`);
     console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
-    return getSentryData(startTime, endTime)
-      .then(data => {
-        if (debug) {
-          console.log('Debug Mode: not sending any data anywhere...');
-          console.log('NR Data: ');
-          console.log(formatDataForNewRelic(data));
-          console.log('Anodot Data: ');
-          console.log(formatDataForAnodot(data));
-          return {
-            newRelicData: formatDataForNewRelic(data),
-            anodotData: formatDataForAnodot(data)
-          };
-        } else {
-          return Promise.all([
-            sendDataToAnodot(data),
-            sendDataToNewRelic(data)
-          ]);
-        }
-      });
+
+    return Promise.all(opts.constants.projects.map(({project, filters}) => {
+      return getSentryData(startTime, endTime, project, filters)
+        .then(data => {
+          if (debug) {
+            console.log('Debug Mode: not sending any data anywhere...');
+            console.log('NR Data: ');
+            console.log(formatDataForNewRelic(data, project));
+            console.log('Anodot Data: ');
+            console.log(formatDataForAnodot(data, project));
+            return {
+              newRelicData: formatDataForNewRelic(data, project),
+              anodotData: formatDataForAnodot(data, project)
+            };
+          } else {
+            return Promise.all([
+              sendDataToAnodot(data, project),
+              sendDataToNewRelic(data, project)
+            ]);
+          }
+        });
+    }));
   });
 
 };
