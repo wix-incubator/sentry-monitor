@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "pretest": "eslint .",
-    "test": "jasmine .",
+    "test": "export JASMINE_CONFIG_PATH=test/jasmine.json; export BABEL_ENV=specs; jasmine",
     "build": ":",
     "release": "wnpm-release -- --no-shrinkwrap",
     "postrelease": "echo \"##teamcity[buildStatus text='Version: `jq -r '.version' package.json`; {build.status.text}']\""
@@ -28,6 +28,8 @@
   "devDependencies": {
     "eslint": "^3.12.2",
     "eslint-config-wix": "^1.1.3",
-    "jasmine": "^2.5.2"
+    "jasmine": "^2.5.2",
+    "jasmine-reporters": "^2.2.0",
+    "jasmine2-reporter": "^0.2.0"
   }
 }

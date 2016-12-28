@@ -1,5 +1,5 @@
 const app = require('express')();
-const run = require('./sentry-monitor');
+const run = require('./src/sentry-monitor');
 
 module.exports = function (config) {
 
