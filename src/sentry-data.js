@@ -4,9 +4,55 @@ const parse = require('parse-link-header');
 const {formatDataForNewRelic, sendDataToNewRelic} = require('./new-relic');
 const {formatDataForAnodot, sendDataToAnodot} = require('./anodot');
 
+const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
+
+const getPage = (url, SENTRY_AUTH) => fetch(url, {
+  headers: {
+    Authorization: SENTRY_AUTH
+  }
+}).then(res => res.json()
+  .then(data => {
+    if (!res.ok) {
+      throw new Error(`Status ${res.status} on ${url}: ${data.detail}`);
+    }
+    const {next} = parse(res.headers.get('link'));
+    return {
+      nextUrl: next.results === 'true' ? next.url : null,
+      data
+    };
+  }))
+  .catch(ex => {
+    console.error('Failed to get page: ', url, ex);
+    throw ex;
+  });
+
+const getPagedData = ({url, startTime, acc = [], opts, datetimeField = 'dateCreated'}) => {
+  console.log(`Fetching page, url: ${url}...`);
+  const {PAGINATION_RECURSION_LIMIT, SENTRY_AUTH} = opts.constants;
+  return getPage(url, SENTRY_AUTH)
+    .then(result => {
+      let {data, nextUrl} = result;
+      let stop;
+      //TODO: is the assumption that data is order by the datetimeField desc correct?
+      if (new Date(data[data.length - 1][datetimeField]) < startTime) {
+        data = _.filter(result.data, item => new Date(item[datetimeField]) > startTime);
+        stop = true;
+      }
+      acc = [...acc, ...data];
+      if (nextUrl && acc.length < PAGINATION_RECURSION_LIMIT && !stop) {
+        return getPagedData({url: nextUrl, startTime, acc, opts});
+      } else {
+        return acc;
+      }
+    })
+    .catch(ex => {
+      console.error('Failed to get data: ', url, ex);
+      throw ex;
+    });
+};
 
 const getSentryDataByProject = ({startTime, endTime, project, filters, opts}) =>
-  getPagedData(`${opts.constants.SENTRY_URL}projects/${opts.constants.org}/${project}/events/`, startTime, [], 'dateCreated', opts.constants.PAGINATION_RECURSION_LIMIT, opts.constants.SENTRY_AUTH)
+  getPagedData({url: `${opts.constants.SENTRY_URL}projects/${opts.constants.org}/${project}/events/`, startTime, acc: [], opts})
     .then(data => {
       console.info(`Processing total of ${data.length} events in range`);
       const results = [];
@@ -40,51 +86,6 @@ const getSentryDataByProject = ({startTime, endTime, project, filters, opts}) =>
     });
 
 
-const getPagedData = (url, startDatetime, acc = [], datetimeField = 'dateCreated', PAGINATION_RECURSION_LIMIT, SENTRY_AUTH) => {
-  console.log(`Fetching page, url: ${url}...`);
-  return getPage(url, SENTRY_AUTH)
-    .then(result => {
-      let {data, nextUrl} = result;
-      let stop;
-      //TODO: is the assumption that data is order by the datetimeField desc correct?
-      if (new Date(data[data.length - 1][datetimeField]) < startDatetime) {
-        data = _.filter(result.data, item => new Date(item[datetimeField]) > startDatetime);
-        stop = true;
-      }
-      acc = [...acc, ...data];
-      if (nextUrl && acc.length < PAGINATION_RECURSION_LIMIT && !stop) {
-        return getPagedData(nextUrl, startDatetime, acc, datetimeField);
-      } else {
-        return acc;
-      }
-    })
-    .catch(ex => {
-      console.error('Failed to get data: ', url, ex);
-      throw ex;
-    });
-};
-
-
-const getPage = (url, SENTRY_AUTH) => fetch(url, {
-  headers: {
-    Authorization: SENTRY_AUTH
-  }
-}).then(res => res.json()
-  .then(data => {
-    if (!res.ok) {
-      throw new Error(`Status ${res.status} on ${url}: ${data.detail}`);
-    }
-    const {next} = parse(res.headers.get('link'));
-    return {
-      nextUrl: next.results === 'true' ? next.url : null,
-      data
-    };
-  }))
-  .catch(ex => {
-    console.error('Failed to get page: ', url, ex);
-    throw ex;
-  });
-
 const processSentryDataForProject = ({data, debug, project, opts}) => {
   const newRelicData = formatDataForNewRelic(data, project);
   const anodotData = formatDataForAnodot(data, project);
@@ -106,7 +107,6 @@ const processSentryDataForProject = ({data, debug, project, opts}) => {
   }
 };
 
-const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
 
 module.exports = {
   getSentryDataByProject,

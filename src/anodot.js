@@ -1,4 +1,6 @@
 const {handleDataUploadResponse} = require('./util');
+const fetch = require('node-fetch');
+
 
 const formatDataForAnodot = (data, project) => {
   return data.map(filterResults => ({
@@ -14,7 +16,7 @@ const formatDataForAnodot = (data, project) => {
   }));
 };
 
-const sendDataToAnodot = data => fetch(opts.constants.ANODOT_URL, {
+const sendDataToAnodot = (data, opts) => fetch(opts.constants.ANODOT_URL, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

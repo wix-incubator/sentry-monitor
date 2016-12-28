@@ -1,4 +1,6 @@
 const {handleDataUploadResponse} = require('./util');
+const fetch = require('node-fetch');
+
 
 const formatDataForNewRelic = (data, project) => {
   const formatted = [];

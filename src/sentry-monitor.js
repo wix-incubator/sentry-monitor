@@ -1,4 +1,3 @@
-const fetch = require('node-fetch');
 const {getSentryDataByProject, processSentryDataForProject} = require('./sentry-data');
 const opts = { };
 
