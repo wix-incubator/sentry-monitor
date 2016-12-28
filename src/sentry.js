@@ -107,7 +107,6 @@ const processSentryDataForProject = ({data, debug, project, opts}) => {
   }
 };
 
-
 module.exports = {
   getSentryDataByProject,
   processSentryDataForProject

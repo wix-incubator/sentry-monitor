@@ -1,4 +1,4 @@
-const {getSentryDataByProject, processSentryDataForProject} = require('./sentry-data');
+const {getSentryDataByProject, processSentryDataForProject} = require('./sentry');
 const opts = { };
 
 const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, projects}) => {
@@ -34,6 +34,8 @@ const run = ({debug = false, config} = {}) => {
     console.info(`--------------------------------------------------------`);
     console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
     const {projects} = opts.constants;
+
+    throw new Error('ddd')
 
     return Promise.all(
       projects
