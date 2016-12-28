@@ -1,7 +1,7 @@
 const app = require('express')();
 const run = require('./sentry-monitor');
 
-module.exports = function(config) {
+module.exports = function (config) {
 
   app.use((req, res, next) => {
     if (config.WSM_AUTH_KEY && req.headers['x-wsm_auth_key'] !== config.WSM_AUTH_KEY) {

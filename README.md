@@ -33,6 +33,7 @@ const config = {
   NEW_RELIC_AUTH: 'new_relic_insert_key',
   NEW_RELIC_ACCOUNT_ID: 'this_is_your_nr_account_id',
   ANODOT_AUTH: 'auth_token_for_anodot_api',
+  WSM_AUTH_KEY: 'optional_secret_key',
   org: 'your_sentry_org_name',
   project: 'your_sentry_project_name',
   filters: [

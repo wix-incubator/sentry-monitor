@@ -23,7 +23,7 @@ const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOU
     org,
     project,
     filters
-  }
+  };
 };
 
 
@@ -112,11 +112,11 @@ const getSentryData = (startTime, endTime) =>
 const formatDataForAnodot = data => {
   return data.map(filterResults => ({
     properties: {
-      what: "sentry_events",
-      project: 'WOA',
+      what: 'sentry_events',
+      project: opts.constants.project,
       filter: filterResults.filterName,
       type: 'event_count',
-      target_type: "counter"
+      target_type: 'counter' //eslint-disable-line camelcase
     },
     timestamp: filterResults.range.end / 1000,
     value: filterResults.totalEvents
@@ -129,7 +129,7 @@ const formatDataForNewRelic = data => {
     const filter = filterResults.filterName;
     formatted.push({
       eventType: 'SentryMonitoring',
-      project: 'WOA',
+      project: opts.constants.project,
       filter,
       type: 'event_count',
       value: filterResults.totalEvents
@@ -138,7 +138,7 @@ const formatDataForNewRelic = data => {
     filterResults.errors.forEach(error => {
       formatted.push({
         eventType: 'SentryMonitoring',
-        project: 'WOA',
+        project: opts.constants.project,
         filter,
         type: 'sentry_issue',
         sentryIssueId: error.groupID,
@@ -183,7 +183,7 @@ const sendDataToAnodot = data => fetch(opts.constants.ANODOT_URL, {
 const run = ({debug = false, config} = {}) => {
   return Promise.resolve().then(() => {
     if (!config) {
-      throw new Error('No config!')
+      throw new Error('No config!');
     }
     opts.constants = getConstants(config);
     const endTime = new Date().getTime();
@@ -201,7 +201,7 @@ const run = ({debug = false, config} = {}) => {
           return {
             newRelicData: formatDataForNewRelic(data),
             anodotData: formatDataForAnodot(data)
-          }
+          };
         } else {
           return Promise.all([
             sendDataToAnodot(data),

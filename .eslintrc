@@ -1,0 +1,6 @@
+{
+    "extends": "wix/esnext",
+    "rules": {
+        "eol-last": 0
+    }
+}
