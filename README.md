@@ -1,27 +1,36 @@
-# sentry-monitor
+# 🖥 Sentry Monitor
 
 ## Big Idea
 
-A job runs every five minutes that reviews all Sentry events in the last five minutes, and filters to those that meet 
+A job runs every five minutes that reviews all [Sentry](https://sentry.io) events in the last five minutes, and filters to those that meet 
 some predetermined search criteria. 
-The data is then summarized nicely and sent to New Relic and Anodot, where we can build dashboards and anomaly detection.
+The data is then summarized nicely and sent to [New Relic](https://newrelic.com) and [Anodot](https://anodot.com) so that you can build dashboards and configure anomaly detection.
 
-For more discussion of the how and why, see [this blog post](http://www.aarongreenwald.com/blog/sentry-new-relic-anodot-integration)
+For more discussion of the how and why, see [this blog post](http://www.aarongreenwald.com/blog/sentry-new-relic-anodot-integration). 
 
 ## The Basic Mechanism
 
 The main artifact of this repo is a web server with a single endpoint. A cron job should `POST` to this endpoint
-once every five minutes, triggering the job. This architecture allows it to be deployed on any number of servers with failover 
+once every five minutes, triggering the job. The job will query Sentry, process the data, and report it to New Relic and Anodot. This (sometimes thought of as convoluted) architecture allows the service to be deployed on any number of servers with failover 
 support and allows it to be safely restarted.
+
+## Some Vocabulary
+
+Your Sentry account is called an *organization* (`org`). Within it, you have any number of `project`s, which hold untold numbers of `events` that are grouped into `issues`. You might have only one project if you have only one application, or you might have several if you work for a large company with lots of different product offerings. The issue grouping is based on Sentry's algorithm that attempts to group similar events so that you can get an idea of how common a bug is, etc.
+
+Sentry Monitor is configured with a list of projects and their associated `filters`. Each filter contains an array of `searchTerms`. The projects are your Sentry projects, and the filters are ways to reduce the overload of events and group them into areas. For example, you might have a filter called `ui` that contains `searchTerms: ['module_1', 'component_x']` because the UI developer(s) on your team are particularly interested in monitoring events that have `module_1` or `component_x` in their text (because Sentry events contain the stack trace, this is an easy way to filter by location in the source). You might have another filter called `infra` and another filter `all` for a broad overview. (They can overlap, each filter will contain all the data that matches its search terms. For the `all` filter, just pass an empty string as the only item in the `searchTerms` array). 
 
 ## What You End Up With 
 
-For each filter:
+For each project/filter, the following data is reported to New Relic every five minutes. The data will be available for querying in the Insights application under the type `SentryMonitoring`.
 
-1. Total Event Count: Number of events that occurred in the last five minutes that meet the criteria
-1. Sentry issues (groups of events that Sentry considers to be the same problem) that occurred in the last five minutes
+1. Total Event Count: Number of events that occurred in the last five minutes that meet the filter criteria
+1. Sentry issues that occurred in the last five minutes
 along with a link to Sentry, a description, and the number of actual events that occurred in the last five minutes matching this issue.
-(This data is not sent to Anodot.)
+
+For each project/filter, the following data is reported to Anodot every five minutes:
+
+1. Total Event Count: Number of events that occurred in the last five minutes that meet the filter criteria
 
 ## Usage
 
