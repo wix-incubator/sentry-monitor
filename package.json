@@ -1,7 +1,10 @@
 {
   "name": "sentry-monitor",
   "version": "1.0.0",
-  "description": "",
+  "description": "Monitor Sentry (https://getsentry.io) events and issues and report them to New Relic, Anodot for dashboards and anomaly detection",
+  "keywords": [
+    "sentry", "anodot", "newrelic", "monitoring", "devops"
+  ],
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
