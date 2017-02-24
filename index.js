@@ -14,8 +14,8 @@ module.exports = function (config) {
 
   app.use((req, res, next) => {
     if (config.WSM_AUTH_KEY && req.headers['x-wsm_auth_key'] !== config.WSM_AUTH_KEY) {
-      console.log(`Request denied from ${req.ip}`, req.headers);
-      return res.sendStatus(403);
+      res.sendStatus(403);
+      throw new Error(`Request denied from ${req.ip}`, req.headers);
     }
     next();
   });
@@ -25,9 +25,9 @@ module.exports = function (config) {
       run({debug: req.query.debug, config})
         .then(data => res.send(req.query.debug ? data : {}))
         .catch(ex => {
-          console.error(ex);
           res.status(500)
             .send(ex.stack ? ex.stack : ex);
+          throw ex;
         });
     });
 
