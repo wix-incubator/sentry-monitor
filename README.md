@@ -4,7 +4,7 @@
 
 A job runs every five minutes that reviews all [Sentry](https://sentry.io) events in the last five minutes, and filters to those that meet 
 some predetermined search criteria. 
-The data is then summarized nicely and sent to [New Relic](https://newrelic.com) and [Anodot](https://anodot.com) so that you can build dashboards and configure anomaly detection.
+The data is then summarized nicely and sent to [New Relic](https://newrelic.com) and [Anodot](https://www.anodot.com) so that you can build dashboards and configure anomaly detection.
 
 For more discussion of the how and why, see [this blog post](http://www.aarongreenwald.com/blog/sentry-new-relic-anodot-integration). 
 
