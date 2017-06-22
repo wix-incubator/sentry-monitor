@@ -99,8 +99,8 @@ const errorsByGroup = ({events, countsByGroup, opts, project, filter}) => Object
   const [groupID, ...tagValues] = groupKey.split('_');
 
   const tags = filter.tags && filter.tags.reduce((acc, tag, i) => Object.assign(acc, {
-      [tag]: tagValues[i]
-    }));
+    [tag]: tagValues[i]
+  }));
 
   return {
     groupID,
