@@ -100,7 +100,7 @@ const errorsByGroup = ({events, countsByGroup, opts, project, filter}) => Object
 
   const tags = filter.tags && filter.tags.reduce((acc, tag, i) => Object.assign(acc, {
     [tag]: tagValues[i]
-  }));
+  }), {});
 
   return {
     groupID,
@@ -115,11 +115,11 @@ const processSentryDataForProject = ({data, debug, project, opts}) => {
   const newRelicData = formatDataForNewRelic(data, project);
   const anodotData = formatDataForAnodot(data, project);
   if (debug) {
-    console.log('Debug Mode: not sending any data anywhere...');
-    console.log('NR Data: ');
-    console.log(newRelicData);
-    console.log('Anodot Data: ');
-    console.log(anodotData);
+    // console.log('Debug Mode: not sending any data anywhere...');
+    // console.log('NR Data: ');
+    // console.log(newRelicData);
+    // console.log('Anodot Data: ');
+    // console.log(anodotData);
     return {
       newRelicData,
       anodotData
