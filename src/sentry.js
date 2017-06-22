@@ -56,17 +56,10 @@ const getSentryDataByProject = ({startTime, endTime, project, filters, opts}) =>
     .then(data => {
       console.info(`Processing total of ${data.length} events in range`);
       const results = [];
-      filters.forEach(filter => {
-        const events = _.filter(data, e => searchEventMessage(e, filter.searchTerms));
-        const counts = _.countBy(events, 'groupID');
-        const mapped = Object.keys(counts).map(groupID => ({
-          groupID,
-          count: counts[groupID],
-          url: `https://sentry.io/${opts.constants.org}/${project}/issues/${groupID}/`,
-          message: _.find(events, e => e.groupID === groupID).message,
-        }));
-        console.info(`Found ${events.length} events in ${mapped.length} issues for project ${project}`);
 
+      filters.forEach(filter => {
+        const {events, errors} = processFilter({filter, data, opts, project});
+        console.info(`Found ${events.length} events in ${errors.length} issues for project ${project}, filter ${filter.name}`);
         results.push({
           range: {
             start: startTime,
@@ -74,7 +67,7 @@ const getSentryDataByProject = ({startTime, endTime, project, filters, opts}) =>
           },
           filterName: filter.name,
           totalEvents: events.length,
-          errors: mapped
+          errors
         });
       });
 
@@ -85,6 +78,38 @@ const getSentryDataByProject = ({startTime, endTime, project, filters, opts}) =>
       throw ex;
     });
 
+
+
+const processFilter = ({filter, data, opts, project}) => {
+  const events = _.filter(data, e => searchEventMessage(e, filter.searchTerms));
+  const countsByGroup = groupAndCount(events, filter.tags);
+  const errors = errorsByGroup({events, countsByGroup, opts, project, filter});
+  return {events, errors};
+};
+
+const groupAndCount = (events, groupByTags = []) => _.countBy(events, event => {
+  const tagValues = groupByTags.map(tagKey => {
+    const tag = _.find(event.tags, tag => tag.key === tagKey);
+    return tag ? tag.value : null;
+  });
+  return `${event.groupID}_${tagValues.join('_')}`;
+});
+
+const errorsByGroup = ({events, countsByGroup, opts, project, filter}) => Object.keys(countsByGroup).map(groupKey => {
+  const [groupID, ...tagValues] = groupKey.split('_');
+
+  const tags = filter.tags && filter.tags.reduce((acc, tag, i) => Object.assign(acc, {
+      [tag]: tagValues[i]
+    }));
+
+  return {
+    groupID,
+    count: countsByGroup[groupKey],
+    tags,
+    url: `https://sentry.io/${opts.constants.org}/${project}/issues/${groupID}/`,
+    message: _.find(events, e => e.groupID === groupID).message,
+  };
+});
 
 const processSentryDataForProject = ({data, debug, project, opts}) => {
   const newRelicData = formatDataForNewRelic(data, project);

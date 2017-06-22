@@ -15,7 +15,7 @@ const formatDataForNewRelic = (data, project) => {
     });
 
     filterResults.errors.forEach(error => {
-      formatted.push({
+      formatted.push(Object.assign({
         eventType: 'SentryMonitoring',
         project,
         filter,
@@ -24,7 +24,7 @@ const formatDataForNewRelic = (data, project) => {
         sentryUrl: error.url,
         message: error.message,
         count: error.count
-      });
+      }, error.tags));
     });
   });
   return formatted;
