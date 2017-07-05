@@ -20,13 +20,15 @@ Your Sentry account is called an *organization* (`org`). Within it, you have any
 
 Sentry Monitor is configured with a list of projects and their associated `filters`. Each filter contains an array of `searchTerms`. The projects are your Sentry projects, and the filters are ways to reduce the overload of events and group them into areas. For example, you might have a filter called `ui` that contains `searchTerms: ['module_1', 'component_x']` because the UI developer(s) on your team are particularly interested in monitoring events that have `module_1` or `component_x` in their text (because Sentry events contain the stack trace, this is an easy way to filter by location in the source). You might have another filter called `infra` and another filter `all` for a broad overview. (They can overlap, each filter will contain all the data that matches its search terms. For the `all` filter, just pass an empty string as the only item in the `searchTerms` array). 
 
+`filters` have an optional `tags` argument for higher-resolution reporting in New Relic. If you pass a `tags` array as part of your `filter` config, the events will be grouped by issue AND all of the tags. For example, you might pass `release` and `os.name` as tags (assuming they exist) and you'll be able to analyze issue trends down to the release and OS level. Note: This data will not be passed to Anodot, just to New Relic.
+
 ## What You End Up With 
 
 For each project/filter, the following data is reported to New Relic every five minutes. The data will be available for querying in the Insights application under the type `SentryMonitoring`.
 
 1. Total Event Count: Number of events that occurred in the last five minutes that meet the filter criteria
 1. Sentry issues that occurred in the last five minutes
-along with a link to Sentry, a description, and the number of actual events that occurred in the last five minutes matching this issue.
+along with a link to Sentry, a description, and the number of actual events that occurred in the last five minutes matching this issue (and set of tags, if specified). 
 
 For each project/filter, the following data is reported to Anodot every five minutes:
 
@@ -53,7 +55,8 @@ const config = {
   filters: [
     {
       name: 'MyFilter',
-      searchTerms: ['items I want to see', 'MORE_ITEMS']
+      searchTerms: ['items I want to see', 'MORE_ITEMS'],
+      tags: ['optional-sentry-tags-to-further-group-by-in-new-relic']
     }
   ]
 };
