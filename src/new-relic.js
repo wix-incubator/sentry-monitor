@@ -23,6 +23,7 @@ const formatDataForNewRelic = (data, project) => {
         sentryIssueId: error.groupID,
         sentryUrl: error.url,
         message: error.message,
+        title: error.title,
         count: error.count
       }, error.tags));
     });

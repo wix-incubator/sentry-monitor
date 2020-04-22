@@ -2,7 +2,6 @@ const _ = require('lodash');
 const fetch = require('node-fetch');
 const parse = require('parse-link-header');
 const {formatDataForNewRelic, sendDataToNewRelic} = require('./new-relic');
-const {formatDataForAnodot, sendDataToAnodot} = require('./anodot');
 
 const searchEventMessage = (event, searchTerms) => searchTerms.some(term => event.message.indexOf(term) !== -1);
 
@@ -108,25 +107,21 @@ const errorsByGroup = ({events, countsByGroup, opts, project, filter}) => Object
     tags,
     url: `https://sentry.io/${opts.constants.org}/${project}/issues/${groupID}/`,
     message: _.find(events, e => e.groupID === groupID).message,
+    title: _.find(events, e => e.groupID === groupID).title,
   };
 });
 
 const processSentryDataForProject = ({data, debug, project, opts}) => {
   const newRelicData = formatDataForNewRelic(data, project);
-  const anodotData = formatDataForAnodot(data, project);
   if (debug) {
     // console.log('Debug Mode: not sending any data anywhere...');
     // console.log('NR Data: ');
     // console.log(newRelicData);
-    // console.log('Anodot Data: ');
-    // console.log(anodotData);
     return {
-      newRelicData,
-      anodotData
+      newRelicData
     };
   } else {
     return Promise.all([
-      sendDataToAnodot(anodotData, opts),
       sendDataToNewRelic(newRelicData, opts)
     ]);
   }

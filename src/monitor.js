@@ -6,7 +6,7 @@ const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOU
   const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
   const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
   const HOUR = 3600 * 1000;
-  const INTERVAL = HOUR / 12;
+  const INTERVAL = HOUR * 3;
   const PAGINATION_RECURSION_LIMIT = 1000; //just in case
 
   return {
