@@ -7,7 +7,7 @@ function checkForIssue(sentryId,JIRA_AUTH) {
     "expand": [
       "names"
     ],
-    "jql": `project = DF AND resolution = Unresolved AND description ~ "id:${sentryId}" ORDER BY priority DESC`,
+    "jql": `project = DF AND description ~ "id:${sentryId}" ORDER BY priority DESC`,
     "maxResults": 50,
     "fieldsByKeys": false,
     "fields": [
