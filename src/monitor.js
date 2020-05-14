@@ -36,7 +36,7 @@ const run = ({debug = false, config} = {}) => {
     console.info(`--------------------------------------------------------`);
     console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
     const {projects} = opts.constants;
-    jiraReporter(opt.constants)
+    jiraReporter(opts.constants)
     return Promise.all(
       projects
         .map(({project, filters}) =>
@@ -45,7 +45,6 @@ const run = ({debug = false, config} = {}) => {
         )
     );
   });
-
 };
 
 module.exports = run;

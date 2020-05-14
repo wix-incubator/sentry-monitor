@@ -7,7 +7,6 @@ function dataformatter ({id,title,permalink,userCount,project,metadata}){
     const labelRegex = /\s/gi
     const regex = /("|\\")/gi
     jiraData.sentryId=id 
-    jiraData.original = title
     jiraData.title = title.replace(regex,'\\"')
     jiraData.count = userCount
     jiraData.project = project.name.replace(labelRegex,'-')
@@ -31,17 +30,15 @@ function dataformatter ({id,title,permalink,userCount,project,metadata}){
 
 const jiraHandler = async (sentryData,JIRA_AUTH) => {
     try{
-        console.log('THIS IS JIRA AUTH:',JIRA_AUTH)
         for (element of sentryData){
             let jiraData = dataformatter(element)
             let issuesFound = await jiraIssueCheck(jiraData,JIRA_AUTH)
             if(issuesFound.length==1){
-                console.log('GOTTA UPDATE ISSUE FROM JIRA')
                 let response = await getIssue(issuesFound[0].key,JIRA_AUTH) 
                 let updateData = await response.json()
                 let updateResponse = await issueUpdate(updateData,jiraData,JIRA_AUTH)
-                console.log("UPDATE STATUS:",updateResponse)
-                if(response.status==400)
+                console.log('UPDATE STATUS:',updateResponse.status)
+                if(updateResponse.status==400)
                 {
                     throw new Error(`Error updating an issue:${response}`)
                 }
