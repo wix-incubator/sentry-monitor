@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "description": "Monitor Sentry (https://getsentry.io) events and issues and report them to New Relic, Anodot for dashboards and anomaly detection",
   "keywords": [
-    "sentry", "anodot", "newrelic", "monitoring", "devops"
+    "sentry",
+    "anodot",
+    "newrelic",
+    "monitoring",
+    "devops"
   ],
   "main": "index.js",
   "scripts": {
@@ -20,7 +24,8 @@
     "express": "^4.14.0",
     "lodash": "^4.17.2",
     "node-fetch": "^1.6.3",
-    "parse-link-header": "^0.4.1"
+    "parse-link-header": "^0.4.1",
+    "querystring": "^0.2.0"
   },
   "optionalDependencies": {
     "wnpm-ci": "^6.2.44"

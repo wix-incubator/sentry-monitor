@@ -1,7 +1,8 @@
-const {getSentryDataByProject, processSentryDataForProject} = require('./sentry');
+const {getSentryDataByProject, processSentryDataForProject} = require('./sentry.js');
+const {jiraReporter} = require('./main')
 const opts = { };
 
-const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, projects}) => {
+const getConstants = ({SENTRY_AUTH,JIRA_AUTH,ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOUNT_ID, org, projects}) => {
   const SENTRY_URL = 'https://sentry.io/api/0/';
   const NEW_RELIC_URL = `https://insights-collector.newrelic.com/v1/accounts/${NEW_RELIC_ACCOUNT_ID}/events`;
   const ANODOT_URL = `https://api.anodot.com/api/v1/metrics?token=${ANODOT_AUTH}&protocol=anodot20`;
@@ -11,6 +12,7 @@ const getConstants = ({SENTRY_AUTH, ANODOT_AUTH, NEW_RELIC_AUTH, NEW_RELIC_ACCOU
 
   return {
     SENTRY_URL,
+    JIRA_AUTH,
     SENTRY_AUTH,
     ANODOT_URL,
     NEW_RELIC_URL,
@@ -34,7 +36,7 @@ const run = ({debug = false, config} = {}) => {
     console.info(`--------------------------------------------------------`);
     console.info(`Beginning task for range: ${new Date(startTime)} - ${new Date(endTime)}`);
     const {projects} = opts.constants;
-
+    jiraReporter(opt.constants)
     return Promise.all(
       projects
         .map(({project, filters}) =>
